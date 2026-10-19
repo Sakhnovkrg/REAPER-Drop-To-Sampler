@@ -21,7 +21,7 @@
 build.bat
 ```
 
-Результат: `build\\reaper\_drop\_to\_sampler.dll` → скопировать в `%APPDATA%\\REAPER\\UserPlugins\\`.
+Результат: `build\reaper_drop_to_sampler.dll` → скопировать в `%APPDATA%\REAPER\UserPlugins\`.
 
 `build(extra).bat` — закрывает REAPER, копирует DLL, запускает REAPER снова.
 
@@ -59,7 +59,7 @@ Requires **MSYS2 UCRT64**: `mingw-w64-ucrt-x86_64-gcc`, `cmake`, `ninja`.
 build.bat
 ```
 
-Output: `build\\reaper_drop_to_sampler.dll` → copy to `%APPDATA%\\REAPER\\UserPlugins\\`.
+Output: `build\reaper_drop_to_sampler.dll` → copy to `%APPDATA%\REAPER\UserPlugins\`.
 
 `build(extra).bat` — stops REAPER, copies the DLL, restarts REAPER.
 
@@ -72,7 +72,6 @@ Output: `build\\reaper_drop_to_sampler.dll` → copy to `%APPDATA%\\REAPER\\User
 * Feedback: `Help\_Set` + layered PNG overlay (GDI+).
 * Settings stored in REAPER ExtState.
 
-\---
 
 DLL: `reaper_drop_to_sampler.dll` · Windows x64
 
