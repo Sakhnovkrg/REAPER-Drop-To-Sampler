@@ -5,7 +5,7 @@
 ## Использование
 
 * Перетащите файлы из Media Explorer (или Проводника) на список треков или микшер.
-* В строке статуса под арранжем отображается режим (New sampler / Replace…).
+* В строке статуса под TCP отображается режим (New sampler / Replace…).
 * **Shift** — один трек / несколько треков
 * **Ctrl** — Layers / Chromatic
 * **Alt** — Add / Replace (не для режима «on FX slot»)
@@ -43,7 +43,7 @@ REAPER extension: drop media on **TCP / MCP** to insert a sampler (RS5k or Cartr
 ## Usage
 
 * Drag files from Media Explorer (or Explorer) onto the track list or mixer.
-* The status line under the arrange shows the mode (New sampler / Replace…).
+* The status line under TCP shows the mode (New sampler / Replace…).
 * **Shift** — one track / multiple tracks
 * **Ctrl** — Layers / Chromatic
 * **Alt** — Add / Replace (not for “on FX slot” mode)
