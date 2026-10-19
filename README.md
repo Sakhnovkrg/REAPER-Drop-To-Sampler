@@ -1,6 +1,6 @@
 # Drop To Sampler
 
-Расширение для [REAPER](https://www.reaper.fm/): перетаскивание медиа на **TCP / MCP** вставляет сэмплер (RS5k или Cartridge) с загруженным сэмплом (вместо вставки айтема на трек)
+Расширение для [REAPER](https://www.reaper.fm/): перетаскивание медиа на **TCP / MCP** вставляет сэмплер (RS5k или [Cartridge](https://dsgdnb.com/plugins/cartridge)) с загруженным сэмплом (вместо вставки айтема на трек)
 
 ## Использование
 
@@ -38,7 +38,7 @@ build.bat
 
 # Drop To Sampler (English)
 
-REAPER extension: drop media on **TCP / MCP** to insert a sampler (RS5k or Cartridge) with the sample loaded (instead of inserting an item on track)
+REAPER extension: drop media on **TCP / MCP** to insert a sampler (RS5k or [Cartridge](https://dsgdnb.com/plugins/cartridge)) with the sample loaded (instead of inserting an item on track)
 
 ## Usage
 
