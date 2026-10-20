@@ -1,15 +1,29 @@
 #!/bin/sh
-# macOS build (universal arm64 + x86_64).
+# macOS (universal arm64 + x86_64) and Linux build.
 # Usage:
 #   ./build.sh           configure + build
-#   ./build.sh deploy    build, copy the dylib to REAPER's UserPlugins
-# Requires Xcode command line tools and CMake. Version: DTS_VERSION=x.y.z ./build.sh
+#   ./build.sh deploy    build, copy the plugin to REAPER's UserPlugins
+# Requires CMake, Perl and a C++17 compiler (Xcode command line tools on macOS).
+# Version: DTS_VERSION=x.y.z ./build.sh
 set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-BUILD_DIR="$ROOT/build/macos"
-DYLIB="reaper_drop_to_sampler.dylib"
-PLUGIN_DIR="${PLUGIN_DIR:-$HOME/Library/Application Support/REAPER/UserPlugins}"
+case "$(uname -s)" in
+    Darwin)
+        BUILD_DIR="$ROOT/build/macos"
+        PLUGIN="reaper_drop_to_sampler.dylib"
+        PLUGIN_DIR="${PLUGIN_DIR:-$HOME/Library/Application Support/REAPER/UserPlugins}"
+        ;;
+    Linux)
+        BUILD_DIR="$ROOT/build/linux"
+        PLUGIN="reaper_drop_to_sampler-$(uname -m).so"
+        PLUGIN_DIR="${PLUGIN_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/REAPER/UserPlugins}"
+        ;;
+    *)
+        echo "Unsupported OS: $(uname -s) (use build.bat on Windows)" >&2
+        exit 1
+        ;;
+esac
 
 ACTION="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
 case "$ACTION" in
@@ -32,11 +46,11 @@ cmake -S "$ROOT" -B "$BUILD_DIR" $CMAKE_ARGS
 
 echo "=== Build ==="
 cmake --build "$BUILD_DIR" --parallel
-echo "Built: $BUILD_DIR/$DYLIB"
+echo "Built: $BUILD_DIR/$PLUGIN"
 
 if [ "$ACTION" = "deploy" ]; then
     echo "=== Copy to UserPlugins ==="
     mkdir -p "$PLUGIN_DIR"
-    cp "$BUILD_DIR/$DYLIB" "$PLUGIN_DIR/$DYLIB"
-    echo "Copied to: $PLUGIN_DIR/$DYLIB (restart REAPER)"
+    cp "$BUILD_DIR/$PLUGIN" "$PLUGIN_DIR/$PLUGIN"
+    echo "Copied to: $PLUGIN_DIR/$PLUGIN (restart REAPER)"
 fi

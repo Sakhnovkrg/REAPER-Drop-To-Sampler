@@ -1,9 +1,10 @@
 #pragma once
 
-// Everything that differs between Windows and macOS lives behind this header.
-// Implementations: platform/win/*.cpp (OLE, GDI+) and platform/mac/*.mm (Cocoa).
+// Everything that differs between Windows, macOS and Linux lives behind this header.
+// Implementations: platform/win/*.cpp (OLE, GDI+), platform/mac/*.mm (Cocoa),
+// platform/linux/*.cpp (SWELL window subclassing), platform/posix/ (shared files).
 // The rest of the plugin uses only the REAPER API and the Win32 subset that
-// REAPER provides on macOS through SWELL.
+// REAPER provides on macOS and Linux through SWELL.
 
 #include "reaper_plugin.h"
 

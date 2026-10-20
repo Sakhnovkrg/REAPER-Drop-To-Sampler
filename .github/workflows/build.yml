@@ -1,6 +1,6 @@
 name: Build
 
-# Builds the plugin for Windows and macOS on every push to main and every pull request.
+# Builds the plugin for Windows, macOS and Linux on every push to main and every pull request.
 # release.yml reuses it with the release version.
 
 on:
@@ -53,4 +53,27 @@ jobs:
         with:
           name: macos-universal
           path: build/macos/reaper_drop_to_sampler.dylib
+          if-no-files-found: error
+
+  linux:
+    # Oldest supported runner: the .so then loads on distros with glibc >= 2.35
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Check exports
+        run: |
+          so=build/linux/reaper_drop_to_sampler-x86_64.so
+          file "$so"
+          nm -D --defined-only "$so" | grep -w ReaperPluginEntry
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64
+          path: build/linux/reaper_drop_to_sampler-x86_64.so
           if-no-files-found: error

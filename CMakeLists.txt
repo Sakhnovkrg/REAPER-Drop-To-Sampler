@@ -82,8 +82,10 @@ if(WIN32)
         target_link_libraries(reaper_drop_to_sampler PRIVATE ${WIN_LIBS})
     endif()
 
-elseif(APPLE)
-    enable_language(OBJCXX)
+else()
+    if(NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(FATAL_ERROR "Only Windows, macOS and Linux are supported")
+    endif()
 
     # SWELL (Win32 API emulation provided by REAPER) from the WDL submodule
     set(WDL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/WDL/WDL)
@@ -102,6 +104,15 @@ elseif(APPLE)
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.rc
         COMMENT "Generating SWELL dialog resources"
     )
+    target_sources(reaper_drop_to_sampler PRIVATE
+        ${RESGEN_DIR}/resource.rc_mac_dlg
+        src/platform/posix/files_posix.cpp
+    )
+    set_source_files_properties(${RESGEN_DIR}/resource.rc_mac_dlg PROPERTIES HEADER_FILE_ONLY ON)
+
+    # "../WDL/swell/swell.h" in reaper_plugin.h resolves against ${WDL_DIR}
+    target_include_directories(reaper_drop_to_sampler PRIVATE ${WDL_DIR} ${RESGEN_DIR})
+    target_compile_definitions(reaper_drop_to_sampler PRIVATE SWELL_PROVIDED_BY_APP NOMINMAX)
 
     # Overlay PNGs embedded as byte arrays (Windows uses RCDATA instead)
     set(EMBED_HEADER ${CMAKE_CURRENT_BINARY_DIR}/overlay_images.h)
@@ -114,21 +125,36 @@ elseif(APPLE)
         file(APPEND ${EMBED_HEADER} "static const unsigned char k_${name}_png[] = {${bytes}};\n")
     endforeach()
 
-    target_sources(reaper_drop_to_sampler PRIVATE
-        ${RESGEN_DIR}/resource.rc_mac_dlg
-        src/platform/mac/drop_target_mac.mm
-        src/platform/mac/overlay_mac.mm
-        src/platform/mac/platform_mac.mm
-        ${WDL_DIR}/swell/swell-modstub.mm
-    )
-    set_source_files_properties(${RESGEN_DIR}/resource.rc_mac_dlg PROPERTIES HEADER_FILE_ONLY ON)
+    if(APPLE)
+        enable_language(OBJCXX)
 
-    # "../WDL/swell/swell.h" in reaper_plugin.h resolves against ${WDL_DIR}
-    target_include_directories(reaper_drop_to_sampler PRIVATE ${WDL_DIR} ${RESGEN_DIR})
-    target_compile_definitions(reaper_drop_to_sampler PRIVATE SWELL_PROVIDED_BY_APP)
-    target_link_libraries(reaper_drop_to_sampler PRIVATE "-framework AppKit")
-    set_target_properties(reaper_drop_to_sampler PROPERTIES SUFFIX ".dylib")
+        target_sources(reaper_drop_to_sampler PRIVATE
+            src/platform/mac/drop_target_mac.mm
+            src/platform/mac/overlay_mac.mm
+            src/platform/mac/platform_mac.mm
+            ${WDL_DIR}/swell/swell-modstub.mm
+        )
+        target_link_libraries(reaper_drop_to_sampler PRIVATE "-framework AppKit")
+        set_target_properties(reaper_drop_to_sampler PROPERTIES SUFFIX ".dylib")
+    else()
+        # Same name as the release asset, so a local deploy replaces the ReaPack install
+        set(DTS_LINUX_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+        if(DTS_LINUX_ARCH STREQUAL "amd64")
+            set(DTS_LINUX_ARCH x86_64)
+        endif()
 
-else()
-    message(FATAL_ERROR "Only Windows and macOS are supported for now")
+        target_sources(reaper_drop_to_sampler PRIVATE
+            src/platform/linux/drop_target_linux.cpp
+            src/platform/linux/overlay_linux.cpp
+            src/platform/linux/platform_linux.cpp
+            ${WDL_DIR}/swell/swell-modstub-generic.cpp
+        )
+        target_link_libraries(reaper_drop_to_sampler PRIVATE ${CMAKE_DL_LIBS})
+        # Static runtime so it loads on distros with an older libstdc++; keep its symbols private
+        target_link_options(reaper_drop_to_sampler PRIVATE -static-libstdc++ -static-libgcc -Wl,--exclude-libs,ALL)
+        set_target_properties(reaper_drop_to_sampler PROPERTIES
+            OUTPUT_NAME "reaper_drop_to_sampler-${DTS_LINUX_ARCH}"
+            SUFFIX ".so"
+        )
+    endif()
 endif()

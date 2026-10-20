@@ -19,7 +19,9 @@
 #include "settings.h"
 #include "settings_page.h"
 
+#include <algorithm>
 #include <cstring>
+#include <vector>
 
 // Forwards drags from DropTargets to the drop logic, with status line + overlay feedback
 class SamplerDragHandler : public DragHandler
@@ -64,7 +66,8 @@ struct AttachedWindow
     HWND hwnd = nullptr;
     std::unique_ptr<DropTarget> target;
 };
-static AttachedWindow g_tcp, g_mcp;
+static AttachedWindow g_tcp;
+static std::vector<AttachedWindow> g_mcps;
 static int g_timerTicks = 0;
 
 // ---------------------------------------------------------------------------
@@ -97,79 +100,108 @@ static HWND FindTcpWindow()
     return nullptr;
 }
 
-static bool WindowLooksLikeMcp(HWND hwnd)
+// The mixer can have several REAPERMCPDisplay windows (e.g. master and tracks, or a
+// master docked apart): take over drops on all of them. Drops reach only the window
+// they were registered on (Windows/macOS) or the deepest window under the cursor
+// (Linux), so attaching to one of them is not enough.
+static bool IsMcpClass(HWND hwnd)
 {
-    if (!hwnd || !IsWindow(hwnd)) return false;
     char cls[256] = {};
-    char title[256] = {};
     GetClassName(hwnd, cls, sizeof(cls));
+    return strstr(cls, "MCP") || strstr(cls, "mcp");
+}
+
+static bool IsMixerTitle(HWND hwnd)
+{
+    char title[256] = {};
     GetWindowText(hwnd, title, sizeof(title));
-    if (strstr(cls, "MCP") || strstr(cls, "mcp"))
-        return true;
-    // Floating / docked mixer host windows
     return strstr(title, "Mixer") || strstr(title, "mixer");
 }
 
-struct McpSearchCtx { HWND found; };
-
-static BOOL CALLBACK EnumMcpDeep(HWND hwnd, LPARAM lParam)
+struct McpSearch
 {
-    McpSearchCtx* ctx = (McpSearchCtx*)lParam;
-    if (WindowLooksLikeMcp(hwnd))
+    std::vector<HWND> displays;
+    HWND mixerHost = nullptr; // fallback: docked / floating host titled "Mixer"
+};
+
+// Own recursion: EnumChildWindows is recursive on Windows but not everywhere in SWELL
+static void CollectMcpWindows(HWND hwnd, McpSearch& search)
+{
+    if (IsMcpClass(hwnd))
     {
-        // Prefer concrete MCP display over generic "Mixer" title
-        char cls[256] = {};
-        GetClassName(hwnd, cls, sizeof(cls));
-        if (strstr(cls, "MCP") || strstr(cls, "mcp"))
-        {
-            ctx->found = hwnd;
-            return FALSE; // stop
-        }
-        if (!ctx->found)
-            ctx->found = hwnd;
+        if (std::find(search.displays.begin(), search.displays.end(), hwnd) == search.displays.end())
+            search.displays.push_back(hwnd);
     }
-    EnumChildWindows(hwnd, EnumMcpDeep, lParam);
+    else if (!search.mixerHost && IsMixerTitle(hwnd))
+    {
+        search.mixerHost = hwnd;
+    }
+    for (HWND child = GetWindow(hwnd, GW_CHILD); child; child = GetWindow(child, GW_HWNDNEXT))
+        CollectMcpWindows(child, search);
+}
+
+static BOOL CALLBACK CollectMcpTopLevel(HWND hwnd, LPARAM lParam)
+{
+    CollectMcpWindows(hwnd, *(McpSearch*)lParam);
     return TRUE;
 }
 
-static BOOL CALLBACK EnumTopForMcp(HWND hwnd, LPARAM lParam)
+static std::vector<HWND> FindMcpWindows()
 {
-    EnumMcpDeep(hwnd, lParam);
-    McpSearchCtx* ctx = (McpSearchCtx*)lParam;
-    return ctx->found ? FALSE : TRUE;
+    McpSearch search;
+    HWND main = GetMainHwnd ? GetMainHwnd() : nullptr;
+    if (main)
+        CollectMcpWindows(main, search);
+    EnumWindows(CollectMcpTopLevel, (LPARAM)&search); // floating mixer / dockers
+    if (search.displays.empty() && search.mixerHost)
+        search.displays.push_back(search.mixerHost);
+    return search.displays;
 }
 
-static HWND FindMcpWindow()
+static void LogAttach(const char* what, HWND hwnd, bool ok)
 {
-    HWND main = GetMainHwnd ? GetMainHwnd() : nullptr;
-    if (!main) return nullptr;
-
-    HWND mcp = FindWindowEx(main, nullptr, "REAPERMCPDisplay", nullptr);
-    if (ClassNameIs(mcp, "REAPERMCPDisplay")) return mcp;
-
-    McpSearchCtx ctx = {};
-    EnumChildWindows(main, EnumMcpDeep, (LPARAM)&ctx);
-    if (ctx.found) return ctx.found;
-
-    // Floating mixer is often a separate top-level window
-    EnumWindows(EnumTopForMcp, (LPARAM)&ctx);
-    return ctx.found;
+    char cls[256] = {}, parentCls[256] = {};
+    GetClassName(hwnd, cls, sizeof(cls));
+    if (HWND parent = GetParent(hwnd))
+        GetClassName(parent, parentCls, sizeof(parentCls));
+    DebugLog("[Drop To Sampler] %s drop target %s (%s in %s)\n", what, ok ? "registered" : "failed",
+        cls, parentCls[0] ? parentCls : "top level");
 }
 
 // (Re)attaches a drop target when the window appears or is recreated
-static void UpdateAttachedWindow(AttachedWindow& w, HWND (*find)(), const char* what)
+static void UpdateTcpWindow()
 {
-    if (w.hwnd && IsWindow(w.hwnd))
+    if (g_tcp.hwnd && IsWindow(g_tcp.hwnd))
         return;
-    w.target.reset();
-    w.hwnd = find();
-    if (!w.hwnd || (&w != &g_tcp && w.hwnd == g_tcp.hwnd)) // MCP search may find the TCP
+    g_tcp.target.reset();
+    g_tcp.hwnd = FindTcpWindow();
+    if (!g_tcp.hwnd) return;
+    g_tcp.target = DropTarget::Attach(g_tcp.hwnd, g_dragHandler);
+    LogAttach("TCP", g_tcp.hwnd, g_tcp.target != nullptr);
+}
+
+static void UpdateMcpWindows()
+{
+    std::vector<HWND> found = FindMcpWindows();
+    found.erase(std::remove(found.begin(), found.end(), g_tcp.hwnd), found.end());
+
+    // Detach windows that are gone or no longer match (e.g. the fallback host once
+    // the real MCP windows exist)
+    g_mcps.erase(std::remove_if(g_mcps.begin(), g_mcps.end(), [&](const AttachedWindow& w) {
+        return !IsWindow(w.hwnd) || std::find(found.begin(), found.end(), w.hwnd) == found.end();
+    }), g_mcps.end());
+
+    for (HWND hwnd : found)
     {
-        w.hwnd = nullptr;
-        return;
+        bool attached = std::any_of(g_mcps.begin(), g_mcps.end(),
+            [&](const AttachedWindow& w) { return w.hwnd == hwnd; });
+        if (attached) continue;
+        AttachedWindow w;
+        w.hwnd = hwnd;
+        w.target = DropTarget::Attach(hwnd, g_dragHandler);
+        LogAttach("MCP", hwnd, w.target != nullptr);
+        g_mcps.push_back(std::move(w)); // kept even on failure, so it is not retried every tick
     }
-    w.target = DropTarget::Attach(w.hwnd, g_dragHandler);
-    DebugLog("[Drop To Sampler] %s drop target %s\n", what, w.target ? "registered" : "failed");
 }
 
 static void OnTimer()
@@ -177,8 +209,8 @@ static void OnTimer()
     if (++g_timerTicks < 20) return;
     g_timerTicks = 0;
 
-    UpdateAttachedWindow(g_tcp, FindTcpWindow, "TCP");
-    UpdateAttachedWindow(g_mcp, FindMcpWindow, "MCP");
+    UpdateTcpWindow();
+    UpdateMcpWindows();
 }
 
 // ---------------------------------------------------------------------------
@@ -219,7 +251,7 @@ static void Cleanup()
 {
     UnregisterSettingsPage();
     g_tcp = AttachedWindow();
-    g_mcp = AttachedWindow();
+    g_mcps.clear();
     if (g_dragHandler)
     {
         g_dragHandler->OnDragLeave();

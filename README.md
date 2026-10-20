@@ -15,15 +15,16 @@ An extension for [REAPER](https://www.reaper.fm/): dropping media onto the **TCP
 
 3. **Extensions → ReaPack → Browse packages…**, find **Drop To Sampler**, install it, then restart REAPER.
 
-Windows (x64) and macOS (Apple Silicon and Intel). If you installed the plugin by hand before, delete the old `reaper_drop_to_sampler.dll` from `UserPlugins`, otherwise REAPER loads both copies.
+Windows (x64), macOS (Apple Silicon and Intel) and Linux (x86_64; experimental, see below). If you installed the plugin by hand before, delete the old `reaper_drop_to_sampler.dll` from `UserPlugins`, otherwise REAPER loads both copies.
 
 ## Usage
 
-* Drag files from the Media Explorer (or Explorer / Finder) onto the track list or the mixer.
+* Drag files from the Media Explorer (or Explorer / Finder / a Linux file manager) onto the track list or the mixer.
 * The status line under the TCP shows the current mode (New sampler / Replace…).
 * **Shift** — one track / multiple tracks
 * **Ctrl** (**Cmd** on macOS) — Layers / Chromatic
 * **Alt** (**Option** on macOS) — Add / Replace (not available in “on FX slot” mode)
+* On Linux the file count is unknown until the drop, so while dragging the status line always describes a single file.
 * Optional: `sampler_insert.png` / `sampler_replace.png` placed in `UserPlugins` override the embedded icons.
 
 **Settings:** *Extensions → Drop To Sampler* or *Preferences → Plug-ins → Drop To Sampler*.
@@ -63,7 +64,18 @@ git submodule update --init
 
 Output: `build/macos/reaper_drop_to_sampler.dylib` (universal arm64 + x86_64). `./build.sh deploy` also copies it to `~/Library/Application Support/REAPER/UserPlugins/`.
 
-The version comes from `-DDTS_VERSION=x.y.z` (local builds default to `0.0.0-dev`). Every push to `main` and every pull request is built for both platforms by the **Build** workflow.
+### Linux (experimental)
+
+Requires CMake, Perl and GCC or Clang (GTK headers are not needed: SWELL comes from REAPER at runtime):
+
+```sh
+git submodule update --init
+./build.sh
+```
+
+Output: `build/linux/reaper_drop_to_sampler-<arch>.so` (e.g. `x86_64`). `./build.sh deploy` also copies it to `~/.config/REAPER/UserPlugins/`.
+
+The version comes from `-DDTS_VERSION=x.y.z` (local builds default to `0.0.0-dev`). Every push to `main` and every pull request is built for all platforms by the **Build** workflow.
 
 ## Release
 
@@ -76,9 +88,9 @@ Releases are built by GitHub Actions; nothing is built or uploaded by hand.
    git push origin v0.1.0
    ```
 
-   The **Release** workflow (`.github/workflows/release.yml`) builds `reaper_drop_to_sampler-x64.dll` (Windows) and `reaper_drop_to_sampler.dylib` (macOS) with version `0.1.0` and creates a **draft** release with them. Only `vX.Y.Z` tags on commits in `main` are released.
+   The **Release** workflow (`.github/workflows/release.yml`) builds `reaper_drop_to_sampler-x64.dll` (Windows) and `reaper_drop_to_sampler.dylib` (macOS), `reaper_drop_to_sampler-x86_64.so` (Linux) with version `0.1.0` and creates a **draft** release with them. Only `vX.Y.Z` tags on commits in `main` are released.
 
-   To ship Windows only, delete the `.dylib` from the draft: ReaPack lists only the platforms whose file is attached.
+   To leave a platform out, delete its file from the draft: ReaPack lists only the platforms whose file is attached.
 2. On GitHub, open the draft (**Releases**), write the description and click **Publish release**. The description becomes the ReaPack changelog, e.g.:
 
    ```
@@ -108,8 +120,10 @@ git push -f origin v0.1.0
 
 Code layout (`src/`):
 
-* `drop`, `sampler`, `tracks`, `settings*`, `prompts` — plugin logic; uses only the REAPER API and the Win32 subset REAPER provides on macOS through SWELL.
+* `drop`, `sampler`, `tracks`, `settings*`, `prompts` — plugin logic; uses only the REAPER API and the Win32 subset REAPER provides on macOS and Linux through SWELL.
 * `platform/platform.h` — interfaces for everything OS-specific: `DropTarget` (takes over drops on a window), `DragOverlay` (cursor icon), file paths.
 * `platform/win/` — OLE `IDropTarget`, GDI+ layered window.
 * `platform/mac/` — the SWELL view's `NSDraggingDestination` methods overridden in a runtime subclass, `NSPanel` overlay.
-* The Preferences page is a dialog in `resource.rc`; on macOS it is converted with `swell_resgen.pl` at build time.
+* `platform/linux/` — the TCP/MCP window procedure subclassed to take `WM_DROPFILES` (SWELL turns XDND drops into it). Hover comes from SWELL's process-wide `SWELL_DDrop_*` hooks, chained in front of REAPER's own (found by diffing libSwell's data around `SWELL_ExtendedAPI`). Overlay: an ARGB GDK window drawn with cairo, both looked up at runtime from REAPER's process.
+* `platform/posix/` — file helpers shared by macOS and Linux.
+* The Preferences page is a dialog in `resource.rc`; on macOS and Linux it is converted with `swell_resgen.pl` at build time.

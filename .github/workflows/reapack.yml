@@ -17,6 +17,7 @@ concurrency:
 env:
   WIN_ASSET: reaper_drop_to_sampler-x64.dll
   MAC_ASSET: reaper_drop_to_sampler.dylib
+  LINUX_ASSET: reaper_drop_to_sampler-x86_64.so
 
 jobs:
   index:
@@ -35,7 +36,7 @@ jobs:
           AUTHOR: ${{ github.repository_owner }}
         run: |
           # Each platform is listed only if its file is attached to the release
-          # (delete the .dylib from the draft to ship Windows only)
+          # (e.g. delete the .so files from the draft to ship without Linux)
           assets=$(gh release view "$TAG" --json assets --jq '.assets[].name')
           url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG"
           sources=()
@@ -46,8 +47,11 @@ jobs:
             sources+=(--source darwin-arm64 "$MAC_ASSET" "$url/$MAC_ASSET")
             sources+=(--source darwin64 "$MAC_ASSET" "$url/$MAC_ASSET")
           fi
+          if grep -qx "$LINUX_ASSET" <<< "$assets"; then
+            sources+=(--source linux64 "$LINUX_ASSET" "$url/$LINUX_ASSET")
+          fi
           if [ ${#sources[@]} -eq 0 ]; then
-            echo "::error::Release $TAG has neither $WIN_ASSET nor $MAC_ASSET"
+            echo "::error::Release $TAG has no plugin binaries"
             exit 1
           fi
 
