@@ -11,6 +11,12 @@ BUILD_DIR="$ROOT/build/macos"
 DYLIB="reaper_drop_to_sampler.dylib"
 PLUGIN_DIR="${PLUGIN_DIR:-$HOME/Library/Application Support/REAPER/UserPlugins}"
 
+ACTION="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+case "$ACTION" in
+    ""|deploy) ;;
+    *) echo "Unknown argument: $1 (expected: deploy)" >&2; exit 1 ;;
+esac
+
 if [ ! -f "$ROOT/vendor/WDL/WDL/swell/swell.h" ]; then
     echo "=== Fetching WDL submodule ==="
     git -C "$ROOT" submodule update --init
@@ -28,7 +34,7 @@ echo "=== Build ==="
 cmake --build "$BUILD_DIR" --parallel
 echo "Built: $BUILD_DIR/$DYLIB"
 
-if [ "$1" = "deploy" ]; then
+if [ "$ACTION" = "deploy" ]; then
     echo "=== Copy to UserPlugins ==="
     mkdir -p "$PLUGIN_DIR"
     cp "$BUILD_DIR/$DYLIB" "$PLUGIN_DIR/$DYLIB"
