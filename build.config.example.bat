@@ -26,5 +26,5 @@ rem Extra arguments passed to CMake configure
 set "CMAKE_ARGS="
 
 rem "build.bat deploy": where the DLL is copied and which REAPER is restarted
-set "PLUGIN_DIR=%APPDATA%\REAPER\UserPlugins"
-set "REAPER_EXE=C:\Program Files\REAPER (x64)\reaper.exe"
+set "PLUGIN_DIR=C:\REAPER\UserPlugins"
+set "REAPER_EXE=C:\REAPER\reaper.exe"
