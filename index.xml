@@ -23,6 +23,10 @@
         <link rel="website" href="https://github.com/daodan96/REAPER-Drop-To-Sampler">Source code</link>
         <link rel="website" href="https://forum.cockos.com/showthread.php?p=2968712">Forum thread</link>
       </metadata>
+      <version name="0.5.0" author="daodan96" time="2026-10-20T06:55:03Z">
+        <changelog><![CDATA[- Hello, ReaPack!]]></changelog>
+        <source platform="win64" file="reaper_drop_to_sampler-x64.dll">https://github.com/daodan96/REAPER-Drop-To-Sampler/releases/download/v0.5.0/reaper_drop_to_sampler-x64.dll</source>
+      </version>
     </reapack>
   </category>
 </index>
