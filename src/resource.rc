@@ -24,7 +24,7 @@ BEGIN
             VALUE "FileDescription", "REAPER extension: drop media on TCP/MCP to insert sampler"
             VALUE "FileVersion", DTS_VERSION_STR
             VALUE "InternalName", "reaper_drop_to_sampler"
-            VALUE "OriginalFilename", "reaper_drop_to_sampler.dll"
+            VALUE "OriginalFilename", "reaper_drop_to_sampler-x64.dll"
             VALUE "ProductName", "Drop To Sampler"
             VALUE "ProductVersion", DTS_VERSION_STR
         END

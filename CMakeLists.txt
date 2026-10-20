@@ -55,7 +55,8 @@ if(WIN32)
         src/platform/win/overlay_win.cpp
         src/platform/win/platform_win.cpp
     )
-    set_target_properties(reaper_drop_to_sampler PROPERTIES SUFFIX ".dll")
+    # Same name as the release asset, so a local deploy replaces the ReaPack install
+    set_target_properties(reaper_drop_to_sampler PROPERTIES OUTPUT_NAME "reaper_drop_to_sampler-x64" SUFFIX ".dll")
 
     if(MSVC)
         target_compile_options(reaper_drop_to_sampler PRIVATE /utf-8)

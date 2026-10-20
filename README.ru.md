@@ -48,7 +48,7 @@ build.bat
 Тулчейн определяется автоматически: сначала MinGW (`MINGW_BIN`, `PATH`, `C:\msys64\ucrt64\bin`), затем Visual Studio (через `vswhere`).
 Чтобы указать свои пути, скопируйте `build.config.example.bat` в `build.config.bat` (он в `.gitignore`) и отредактируйте.
 
-Результат: `build\<mingw|msvc>\reaper_drop_to_sampler.dll` → скопировать в `%APPDATA%\REAPER\UserPlugins\`.
+Результат: `build\<mingw|msvc>\reaper_drop_to_sampler-x64.dll` (то же имя, что при установке через ReaPack) → скопировать в `%APPDATA%\REAPER\UserPlugins\`.
 
 `build.bat deploy` собирает, закрывает REAPER, копирует DLL и снова запускает REAPER. Пути берутся из `PLUGIN_DIR` / `REAPER_EXE` в `build.config.bat`.
 

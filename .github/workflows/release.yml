@@ -51,8 +51,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir dist
-          cp artifacts/windows-x64/reaper_drop_to_sampler.dll dist/reaper_drop_to_sampler-x64.dll
-          cp artifacts/macos-universal/reaper_drop_to_sampler.dylib dist/reaper_drop_to_sampler.dylib
+          cp artifacts/windows-x64/reaper_drop_to_sampler-x64.dll dist/
+          cp artifacts/macos-universal/reaper_drop_to_sampler.dylib dist/
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" dist/* --clobber
           else

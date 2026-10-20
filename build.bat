@@ -5,7 +5,7 @@ rem   build.bat deploy    build, close REAPER, copy DLL to UserPlugins, start RE
 rem Local settings: build.config.bat (see build.config.example.bat)
 setlocal EnableExtensions
 
-set "DLL_NAME=reaper_drop_to_sampler.dll"
+set "DLL_NAME=reaper_drop_to_sampler-x64.dll"
 
 rem %~dp0 ends with backslash; trailing \ before " breaks quoting on Windows
 set "ROOT=%~dp0"

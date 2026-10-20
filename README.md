@@ -48,7 +48,7 @@ build.bat
 The toolchain is auto-detected: MinGW first (`MINGW_BIN`, `PATH`, `C:\msys64\ucrt64\bin`), then Visual Studio (via `vswhere`).
 To set your own paths, copy `build.config.example.bat` to `build.config.bat` (git-ignored) and edit it.
 
-Output: `build\<mingw|msvc>\reaper_drop_to_sampler.dll` → copy it to `%APPDATA%\REAPER\UserPlugins\`.
+Output: `build\<mingw|msvc>\reaper_drop_to_sampler-x64.dll` (same name as the ReaPack install) → copy it to `%APPDATA%\REAPER\UserPlugins\`.
 
 `build.bat deploy` builds, closes REAPER, copies the DLL and restarts REAPER. Paths come from `PLUGIN_DIR` / `REAPER_EXE` in `build.config.bat`.
 

@@ -33,7 +33,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: build/msvc/reaper_drop_to_sampler.dll
+          path: build/msvc/reaper_drop_to_sampler-x64.dll
           if-no-files-found: error
 
   macos:
