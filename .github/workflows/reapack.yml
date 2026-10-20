@@ -15,7 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DLL_ASSET: reaper_drop_to_sampler-x64.dll
+  WIN_ASSET: reaper_drop_to_sampler-x64.dll
+  MAC_ASSET: reaper_drop_to_sampler.dylib
+  LINUX_ASSET: reaper_drop_to_sampler-x86_64.so
 
 jobs:
   index:
@@ -26,28 +28,39 @@ jobs:
         with:
           ref: main
 
-      - name: Check release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
-        run: |
-          if ! gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx "$DLL_ASSET"; then
-            echo "::error::Release $TAG has no $DLL_ASSET asset"
-            exit 1
-          fi
-
       - name: Update index.xml
         env:
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
           NOTES: ${{ github.event.release.body }}
           AUTHOR: ${{ github.repository_owner }}
         run: |
+          # Each platform is listed only if its file is attached to the release
+          # (e.g. delete the .so files from the draft to ship without Linux)
+          assets=$(gh release view "$TAG" --json assets --jq '.assets[].name')
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG"
+          sources=()
+          if grep -qx "$WIN_ASSET" <<< "$assets"; then
+            sources+=(--source win64 "$WIN_ASSET" "$url/$WIN_ASSET")
+          fi
+          if grep -qx "$MAC_ASSET" <<< "$assets"; then
+            sources+=(--source darwin-arm64 "$MAC_ASSET" "$url/$MAC_ASSET")
+            sources+=(--source darwin64 "$MAC_ASSET" "$url/$MAC_ASSET")
+          fi
+          if grep -qx "$LINUX_ASSET" <<< "$assets"; then
+            sources+=(--source linux64 "$LINUX_ASSET" "$url/$LINUX_ASSET")
+          fi
+          if [ ${#sources[@]} -eq 0 ]; then
+            echo "::error::Release $TAG has no plugin binaries"
+            exit 1
+          fi
+
           printf '%s' "$NOTES" > "$RUNNER_TEMP/changelog.md"
           python3 tools/reapack_index.py \
             --version "${TAG#v}" \
             --author "$AUTHOR" \
             --changelog-file "$RUNNER_TEMP/changelog.md" \
-            --source win64 "$DLL_ASSET" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG/$DLL_ASSET"
+            "${sources[@]}"
 
       - name: Commit and push
         env:

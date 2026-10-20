@@ -15,16 +15,17 @@
 
 3. **Extensions → ReaPack → Browse packages…**, найдите **Drop To Sampler**, установите и перезапустите REAPER.
 
-Только Windows x64. Если раньше плагин ставили вручную, удалите старый `reaper_drop_to_sampler.dll` из `UserPlugins`, иначе REAPER загрузит обе копии.
+Windows (x64), macOS (Apple Silicon и Intel) и Linux (x86_64; экспериментально, см. ниже). Если раньше плагин ставили вручную, удалите старый `reaper_drop_to_sampler.dll` из `UserPlugins`, иначе REAPER загрузит обе копии.
 
 ## Использование
 
-* Перетащите файлы из Media Explorer (или Проводника) на список треков или в микшер.
+* Перетащите файлы из Media Explorer (или Проводника / Finder / файлового менеджера Linux) на список треков или в микшер.
 * В строке статуса под TCP отображается текущий режим (New sampler / Replace…).
 * **Shift** — один трек / несколько треков
-* **Ctrl** — Layers / Chromatic
-* **Alt** — Add / Replace (кроме режима «on FX slot»)
-* Опционально: `sampler_insert.png` / `sampler_replace.png` рядом с DLL заменяют встроенные иконки.
+* **Ctrl** (**Cmd** на macOS) — Layers / Chromatic
+* **Alt** (**Option** на macOS) — Add / Replace (кроме режима «on FX slot»)
+* На Linux количество файлов до дропа неизвестно, поэтому во время перетаскивания строка статуса всегда описывает один файл.
+* Опционально: `sampler_insert.png` / `sampler_replace.png` в `UserPlugins` заменяют встроенные иконки.
 
 **Настройки:** *Extensions → Drop To Sampler* или *Preferences → Plug-ins → Drop To Sampler*.
 
@@ -33,6 +34,8 @@
 Вопросы, баги и идеи: [ветка на форуме Cockos](https://forum.cockos.com/showthread.php?p=2968712).
 
 ## Сборка
+
+### Windows
 
 Подойдёт любой из тулчейнов:
 
@@ -46,11 +49,33 @@ build.bat
 Тулчейн определяется автоматически: сначала MinGW (`MINGW_BIN`, `PATH`, `C:\msys64\ucrt64\bin`), затем Visual Studio (через `vswhere`).
 Чтобы указать свои пути, скопируйте `build.config.example.bat` в `build.config.bat` (он в `.gitignore`) и отредактируйте.
 
-Результат: `build\<mingw|msvc>\reaper_drop_to_sampler.dll` → скопировать в `%APPDATA%\REAPER\UserPlugins\`.
+Результат: `build\<mingw|msvc>\reaper_drop_to_sampler-x64.dll` (то же имя, что при установке через ReaPack) → скопировать в `%APPDATA%\REAPER\UserPlugins\`.
 
 `build.bat deploy` собирает, закрывает REAPER, копирует DLL и снова запускает REAPER. Пути берутся из `PLUGIN_DIR` / `REAPER_EXE` в `build.config.bat`.
 
-Версия задаётся через `-DDTS_VERSION=x.y.z` (у локальных сборок по умолчанию `0.0.0-dev`).
+### macOS (экспериментально)
+
+Нужны Xcode command line tools и CMake. SWELL берётся из сабмодуля [WDL](https://github.com/justinfrankel/WDL):
+
+```sh
+git submodule update --init
+./build.sh
+```
+
+Результат: `build/macos/reaper_drop_to_sampler.dylib` (universal arm64 + x86_64). `./build.sh deploy` дополнительно копирует его в `~/Library/Application Support/REAPER/UserPlugins/`.
+
+### Linux (экспериментально)
+
+Нужны CMake, Perl и GCC или Clang (заголовки GTK не нужны: SWELL предоставляет REAPER во время работы):
+
+```sh
+git submodule update --init
+./build.sh
+```
+
+Результат: `build/linux/reaper_drop_to_sampler-<arch>.so` (например, `x86_64`). `./build.sh deploy` дополнительно копирует его в `~/.config/REAPER/UserPlugins/`.
+
+Версия задаётся через `-DDTS_VERSION=x.y.z` (у локальных сборок по умолчанию `0.0.0-dev`). Каждый пуш в `main` и каждый pull request собирается под все платформы workflow **Build**.
 
 ## Релиз
 
@@ -63,7 +88,9 @@ build.bat
    git push origin v0.1.0
    ```
 
-   Workflow **Release** (`.github/workflows/release.yml`) соберёт `reaper_drop_to_sampler-x64.dll` с версией `0.1.0` и создаст **черновик** релиза. Релизятся только теги `vX.Y.Z` на коммитах из `main`.
+   Workflow **Release** (`.github/workflows/release.yml`) соберёт `reaper_drop_to_sampler-x64.dll` (Windows) и `reaper_drop_to_sampler.dylib` (macOS), `reaper_drop_to_sampler-x86_64.so` (Linux) с версией `0.1.0` и создаст с ними **черновик** релиза. Релизятся только теги `vX.Y.Z` на коммитах из `main`.
+
+   Чтобы не выпускать какую-то платформу, удалите её файл из черновика: в ReaPack попадают только платформы, чей файл приложен к релизу.
 2. На GitHub откройте черновик (**Releases**), напишите описание и нажмите **Publish release**. Описание станет changelog в ReaPack, например:
 
    ```
@@ -76,7 +103,7 @@ build.bat
 
 Чтобы исправить changelog, отредактируйте описание опубликованного релиза — `index.xml` обновится сам.
 
-Чтобы пересобрать черновик (например, после исправления), перенесите тег и запушьте его заново — DLL в черновике заменится:
+Чтобы пересобрать черновик (например, после исправления), перенесите тег и запушьте его заново — файлы в черновике заменятся:
 
 ```sh
 git tag -f v0.1.0
@@ -85,9 +112,18 @@ git push -f origin v0.1.0
 
 ## Как это работает
 
-* OLE `IDropTarget` на окнах TCP/MCP перехватывает дроп файлов.
-* Стандартная вставка айтема блокируется; FX добавляется через `TrackFX_AddByName`.
+* Дроп файлов на окна TCP/MCP перехватывается, поэтому стандартная вставка айтема не происходит; FX добавляется через `TrackFX_AddByName`.
 * RS5k: `FILE0` + `DONE`; Cartridge: `pending_load.txt` + параметр Load Trigger.
 * Цель дропа (трек / слот FX) определяется через `GetThingFromPoint`.
-* Индикация: `Help_Set` + PNG-оверлей (GDI+).
+* Индикация: `Help_Set` + PNG-иконка у курсора.
 * Настройки хранятся в ExtState REAPER.
+
+Структура кода (`src/`):
+
+* `drop`, `sampler`, `tracks`, `settings*`, `prompts` — логика плагина; использует только REAPER API и подмножество Win32, которое REAPER на macOS и Linux предоставляет через SWELL.
+* `platform/platform.h` — интерфейсы всего платформенного: `DropTarget` (перехват дропа на окне), `DragOverlay` (иконка у курсора), пути к файлам.
+* `platform/win/` — OLE `IDropTarget`, layered-окно на GDI+.
+* `platform/mac/` — методы `NSDraggingDestination` вида SWELL, переопределённые в подклассе, созданном в рантайме; оверлей на `NSPanel`.
+* `platform/linux/` — подмена оконной процедуры TCP/MCP, чтобы перехватывать `WM_DROPFILES` (в него SWELL превращает XDND-дропы). Наведение — через глобальные хуки SWELL `SWELL_DDrop_*`, встроенные перед хуками REAPER (их адрес находится сравнением данных libSwell до и после `SWELL_ExtendedAPI`). Оверлей — ARGB-окно GDK, рисуется через cairo; обе библиотеки берутся из процесса REAPER во время работы.
+* `platform/posix/` — работа с файлами, общая для macOS и Linux.
+* Страница настроек — диалог в `resource.rc`; на macOS и Linux он конвертируется `swell_resgen.pl` при сборке.

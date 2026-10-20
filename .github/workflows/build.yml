@@ -1,0 +1,79 @@
+name: Build
+
+# Builds the plugin for Windows, macOS and Linux on every push to main and every pull request.
+# release.yml reuses it with the release version.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+    inputs:
+      version:
+        description: "Plugin version (x.y.z); empty = 0.0.0-dev"
+        type: string
+        default: ""
+
+env:
+  DTS_VERSION: ${{ inputs.version }}
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        shell: cmd
+        run: |
+          > build.config.bat echo set "TOOLCHAIN=msvc"
+          if not "%DTS_VERSION%"=="" >> build.config.bat echo set "CMAKE_ARGS=-DDTS_VERSION=%DTS_VERSION%"
+          call .\build.bat
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: build/msvc/reaper_drop_to_sampler-x64.dll
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Check architectures
+        run: lipo -info build/macos/reaper_drop_to_sampler.dylib
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: build/macos/reaper_drop_to_sampler.dylib
+          if-no-files-found: error
+
+  linux:
+    # Oldest supported runner: the .so then loads on distros with glibc >= 2.35
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Check exports
+        run: |
+          so=build/linux/reaper_drop_to_sampler-x86_64.so
+          file "$so"
+          nm -D --defined-only "$so" | grep -w ReaperPluginEntry
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64
+          path: build/linux/reaper_drop_to_sampler-x86_64.so
+          if-no-files-found: error
