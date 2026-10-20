@@ -11,7 +11,7 @@ namespace platform {
 
 std::string CartridgeDataDir()
 {
-    // TODO: confirm where Cartridge looks for pending_load.txt on macOS
+    // ~/Library/Application Support/Cartridge
     NSArray* dirs = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
     NSString* base = [dirs count] ? [dirs objectAtIndex:0] : NSTemporaryDirectory();
     return std::string([base UTF8String]) + "/Cartridge";
