@@ -1,0 +1,67 @@
+name: ReaPack
+
+# Adds the published release to index.xml, using the release description as the changelog.
+# Editing the description of a published release updates the changelog.
+
+on:
+  release:
+    types: [published, edited]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reapack-index
+  cancel-in-progress: false
+
+env:
+  DLL_ASSET: reaper_drop_to_sampler-x64.dll
+
+jobs:
+  index:
+    if: ${{ !github.event.release.draft && !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if ! gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx "$DLL_ASSET"; then
+            echo "::error::Release $TAG has no $DLL_ASSET asset"
+            exit 1
+          fi
+
+      - name: Update index.xml
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          NOTES: ${{ github.event.release.body }}
+          AUTHOR: ${{ github.repository_owner }}
+        run: |
+          printf '%s' "$NOTES" > "$RUNNER_TEMP/changelog.md"
+          python3 tools/reapack_index.py \
+            --version "${TAG#v}" \
+            --author "$AUTHOR" \
+            --changelog-file "$RUNNER_TEMP/changelog.md" \
+            --source win64 "$DLL_ASSET" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG/$DLL_ASSET"
+
+      - name: Commit and push
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if git diff --quiet; then
+            echo "index.xml unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git commit -am "ReaPack: $TAG"
+          for attempt in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            git pull --rebase origin main
+          done
+          exit 1

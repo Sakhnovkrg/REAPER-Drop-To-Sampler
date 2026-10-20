@@ -1,77 +1,93 @@
 # Drop To Sampler
 
-Расширение для [REAPER](https://www.reaper.fm/): перетаскивание медиа на **TCP / MCP** вставляет сэмплер (RS5k или [Cartridge](https://dsgdnb.com/plugins/cartridge)) с загруженным сэмплом (вместо вставки айтема на трек)
+**English** · [Русский](README.ru.md)
 
-## Использование
+An extension for [REAPER](https://www.reaper.fm/): dropping media onto the **TCP / MCP** inserts a sampler (RS5k or [Cartridge](https://dsgdnb.com/plugins/cartridge)) with the sample loaded, instead of inserting an item on the track.
 
-* Перетащите файлы из Media Explorer (или Проводника) на список треков или микшер.
-* В строке статуса под TCP отображается режим (New sampler / Replace…).
-* **Shift** — один трек / несколько треков
-* **Ctrl** — Layers / Chromatic
-* **Alt** — Add / Replace (не для режима «on FX slot»)
-* Опционально: `sampler_insert.png` / `sampler_replace.png` рядом с DLL подменяют встроенные иконки.
+## Install
 
-**Настройки:** *Extensions → Drop To Sampler* или *Preferences → Plug-ins → Drop To Sampler*.
+1. In REAPER: **Extensions → ReaPack → Import repositories…**
+2. Paste this URL:
 
-## Сборка
+   ```
+   https://raw.githubusercontent.com/daodan96/REAPER-Drop-To-Sampler/main/index.xml
+   ```
 
-Нужен **MSYS2 UCRT64**: `mingw-w64-ucrt-x86\_64-gcc`, `cmake`, `ninja`.
+3. **Extensions → ReaPack → Browse packages…**, find **Drop To Sampler**, install it, then restart REAPER.
 
-```bat
-build.bat
-```
-
-Результат: `build\reaper_drop_to_sampler.dll` → скопировать в `%APPDATA%\REAPER\UserPlugins\`.
-
-`build(extra).bat` — закрывает REAPER, копирует DLL, запускает REAPER снова.
-
-## Как работает
-
-* OLE `IDropTarget` на окнах TCP/MCP перехватывает дроп файлов.
-* Нативная вставка айтема блокируется; FX добавляется через `TrackFX_AddByName`.
-* RS5k: `FILE0` + `DONE`; Cartridge: `pending_load.txt` + параметр Load Trigger.
-* Цель дропа через `GetThingFromPoint` (трек / слот FX).
-* Индикация: `Help_Set` + PNG-оверлей (GDI+).
-* Настройки хранятся в ExtState REAPER.
-
-\---
-
-# Drop To Sampler (English)
-
-REAPER extension: drop media on **TCP / MCP** to insert a sampler (RS5k or [Cartridge](https://dsgdnb.com/plugins/cartridge)) with the sample loaded (instead of inserting an item on track)
+Windows x64 only. If you installed the plugin by hand before, delete the old `reaper_drop_to_sampler.dll` from `UserPlugins`, otherwise REAPER loads both copies.
 
 ## Usage
 
-* Drag files from Media Explorer (or Explorer) onto the track list or mixer.
-* The status line under TCP shows the mode (New sampler / Replace…).
+* Drag files from the Media Explorer (or Windows Explorer) onto the track list or the mixer.
+* The status line under the TCP shows the current mode (New sampler / Replace…).
 * **Shift** — one track / multiple tracks
 * **Ctrl** — Layers / Chromatic
-* **Alt** — Add / Replace (not for “on FX slot” mode)
-* Optional: `sampler_insert.png` / `sampler_replace.png` next to the DLL override the embedded icons.
+* **Alt** — Add / Replace (not available in “on FX slot” mode)
+* Optional: `sampler_insert.png` / `sampler_replace.png` placed next to the DLL override the embedded icons.
 
 **Settings:** *Extensions → Drop To Sampler* or *Preferences → Plug-ins → Drop To Sampler*.
 
+## Discussion
+
+Questions, bug reports and ideas: [forum thread on Cockos](https://forum.cockos.com/showthread.php?p=2968712).
+
 ## Build
 
-Requires **MSYS2 UCRT64**: `mingw-w64-ucrt-x86_64-gcc`, `cmake`, `ninja`.
+Any of these toolchains works:
+
+* **MSYS2 UCRT64**: `mingw-w64-ucrt-x86_64-gcc`, `cmake`, `ninja`
+* **Visual Studio 2022+** with "Desktop development with C++" (CMake and Ninja are bundled)
 
 ```bat
 build.bat
 ```
 
-Output: `build\reaper_drop_to_sampler.dll` → copy to `%APPDATA%\REAPER\UserPlugins\`.
+The toolchain is auto-detected: MinGW first (`MINGW_BIN`, `PATH`, `C:\msys64\ucrt64\bin`), then Visual Studio (via `vswhere`).
+To set your own paths, copy `build.config.example.bat` to `build.config.bat` (git-ignored) and edit it.
 
-`build(extra).bat` — stops REAPER, copies the DLL, restarts REAPER.
+Output: `build\<mingw|msvc>\reaper_drop_to_sampler.dll` → copy it to `%APPDATA%\REAPER\UserPlugins\`.
+
+`build.bat deploy` builds, closes REAPER, copies the DLL and restarts REAPER. Paths come from `PLUGIN_DIR` / `REAPER_EXE` in `build.config.bat`.
+
+The version comes from `-DDTS_VERSION=x.y.z` (local builds default to `0.0.0-dev`).
+
+## Release
+
+Releases are built by GitHub Actions; nothing is built or uploaded by hand.
+
+1. Make sure the commit you want to release is pushed to `main`, then tag it with `vX.Y.Z` and push the tag:
+
+   ```sh
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+   The **Release** workflow (`.github/workflows/release.yml`) builds `reaper_drop_to_sampler-x64.dll` with version `0.1.0` and creates a **draft** release with it. Only `vX.Y.Z` tags on commits in `main` are released.
+2. On GitHub, open the draft (**Releases**), write the description and click **Publish release**. The description becomes the ReaPack changelog, e.g.:
+
+   ```
+   - Added chromatic mode for Cartridge
+   - Fixed drop on an empty FX slot
+   ```
+
+   The description must not be empty. Write it in English: every ReaPack user sees it.
+3. The **ReaPack** workflow (`.github/workflows/reapack.yml`) adds the version to `index.xml` and commits it to `main`. Run `git pull` afterwards to get that commit locally.
+
+To fix the changelog, edit the description of the published release: `index.xml` is updated automatically.
+
+To rebuild a draft (e.g. after a fix), move the tag and push it again; the draft's DLL is replaced:
+
+```sh
+git tag -f v0.1.0
+git push -f origin v0.1.0
+```
 
 ## How it works
 
-* OLE `IDropTarget` on TCP/MCP windows intercepts file drops.
-* Native item-insert is suppressed; FX is added via `TrackFX\_AddByName`.
-* RS5k: `FILE0` + `DONE`; Cartridge: `pending\_load.txt` + Load Trigger parameter.
-* Drop target from `GetThingFromPoint` (track / FX slot).
-* Feedback: `Help\_Set` + layered PNG overlay (GDI+).
-* Settings stored in REAPER ExtState.
-
-
-DLL: `reaper_drop_to_sampler.dll` · Windows x64
-
+* An OLE `IDropTarget` on the TCP/MCP windows intercepts file drops.
+* REAPER's native item insert is suppressed; the FX is added via `TrackFX_AddByName`.
+* RS5k: `FILE0` + `DONE`; Cartridge: `pending_load.txt` + the Load Trigger parameter.
+* The drop target (track / FX slot) is resolved with `GetThingFromPoint`.
+* Feedback: `Help_Set` + a layered PNG overlay (GDI+).
+* Settings are stored in REAPER ExtState.

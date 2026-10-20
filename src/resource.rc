@@ -1,11 +1,12 @@
 #include "resource.h"
+#include "version.h"
 
 IDR_PNG_INSERT  RCDATA "res/sampler_insert.png"
 IDR_PNG_REPLACE RCDATA "res/sampler_replace.png"
 
 1 VERSIONINFO
-FILEVERSION    0,5,0,0
-PRODUCTVERSION 0,5,0,0
+FILEVERSION    DTS_VERSION_MAJOR,DTS_VERSION_MINOR,DTS_VERSION_PATCH,0
+PRODUCTVERSION DTS_VERSION_MAJOR,DTS_VERSION_MINOR,DTS_VERSION_PATCH,0
 FILEFLAGSMASK  0x3fL
 FILEFLAGS      0
 FILEOS         0x40004L
@@ -18,11 +19,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Drop To Sampler"
             VALUE "FileDescription", "REAPER extension: drop media on TCP/MCP to insert sampler"
-            VALUE "FileVersion", "0.5"
+            VALUE "FileVersion", DTS_VERSION_STR
             VALUE "InternalName", "reaper_drop_to_sampler"
             VALUE "OriginalFilename", "reaper_drop_to_sampler.dll"
             VALUE "ProductName", "Drop To Sampler"
-            VALUE "ProductVersion", "0.5"
+            VALUE "ProductVersion", DTS_VERSION_STR
         END
     END
     BLOCK "VarFileInfo"

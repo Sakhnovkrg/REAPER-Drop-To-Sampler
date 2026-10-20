@@ -7,6 +7,7 @@
 #include "reaper_plugin.h"
 #include "reaper_plugin_functions.h"
 #include "resource.h"
+#include "version.h"
 
 #include <windows.h>
 #include <windowsx.h>
@@ -69,7 +70,7 @@ enum ExistingSamplerMode
     Existing_ReplaceOnSlot = 2  // replace only when drop hits that FX slot on TCP
 };
 
-static const char* kPluginVersion = "0.5";
+static const char* kPluginVersion = DTS_VERSION_STR;
 static const char* kExtSection = "DropToSampler";
 static const char* kExtSectionLegacy = "DropMediaTcpMcpSampler";
 static const char* kExtKeyDebug = "debug";
