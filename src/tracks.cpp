@@ -78,6 +78,9 @@ void ApplyRecArmForNewTrack(MediaTrack* track)
     // Input: MIDI -> All MIDI Inputs (4096 + 2016 = 6112, common REAPER value)
     SetMediaTrackInfo_Value(track, "I_RECINPUT", 6112.0);
 
+    // Monitor input (may be off by track defaults)
+    SetMediaTrackInfo_Value(track, "I_RECMON", 1.0);
+
     if (g_settings.recArmMode == RecArm_On)
         SetMediaTrackInfo_Value(track, "I_RECARM", 1.0);
     else if (g_settings.recArmMode == RecArm_Auto)
