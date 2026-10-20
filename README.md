@@ -4,111 +4,66 @@
 
 An extension for [REAPER](https://www.reaper.fm/): dropping media onto the **TCP / MCP** inserts a sampler (RS5k or [Cartridge](https://dsgdnb.com/plugins/cartridge)) with the sample loaded, instead of inserting an item on the track.
 
+Windows (x64), macOS (Apple Silicon and Intel), Linux (x86_64).
+
 ## Install
 
-1. In REAPER: **Extensions → ReaPack → Import repositories…**
-2. Paste this URL:
+1. **Extensions → ReaPack → Import repositories…**
 
    ```
    https://raw.githubusercontent.com/daodan96/REAPER-Drop-To-Sampler/main/index.xml
    ```
 
-3. **Extensions → ReaPack → Browse packages…**, find **Drop To Sampler**, install it, then restart REAPER.
+2. **Extensions → ReaPack → Browse packages…** → **Drop To Sampler** → install, restart REAPER.
 
-Windows (x64), macOS (Apple Silicon and Intel) and Linux (x86_64; experimental, see below). If you installed the plugin by hand before, delete the old `reaper_drop_to_sampler.dll` from `UserPlugins`, otherwise REAPER loads both copies.
+If you installed the plugin by hand before, delete the old `reaper_drop_to_sampler.dll` from `UserPlugins`, otherwise REAPER loads both copies.
 
 ## Usage
 
-* Drag files from the Media Explorer (or Explorer / Finder / a Linux file manager) onto the track list or the mixer.
-* The status line under the TCP shows the current mode (New sampler / Replace…).
+Drag files from the Media Explorer (or Explorer / Finder / a file manager) onto the track list or the mixer. The status line under the TCP shows the current mode.
+
 * **Shift** — one track / multiple tracks
 * **Ctrl** (**Cmd** on macOS) — Layers / Chromatic
 * **Alt** (**Option** on macOS) — Add / Replace (not available in “on FX slot” mode)
-* On Linux the file count is unknown until the drop, so while dragging the status line always describes a single file.
-* Optional: `sampler_insert.png` / `sampler_replace.png` placed in `UserPlugins` override the embedded icons.
+
+On Linux the file count is unknown until the drop, so the status line always describes a single file while dragging.
+
+`sampler_insert.png` / `sampler_replace.png` placed in `UserPlugins` override the embedded icons.
 
 **Settings:** *Extensions → Drop To Sampler* or *Preferences → Plug-ins → Drop To Sampler*.
 
 ## Discussion
 
-Questions, bug reports and ideas: [forum thread on Cockos](https://forum.cockos.com/showthread.php?p=2968712).
+[Forum thread on Cockos](https://forum.cockos.com/showthread.php?p=2968712).
 
 ## Build
 
-### Windows
-
-Any of these toolchains works:
-
-* **MSYS2 UCRT64**: `mingw-w64-ucrt-x86_64-gcc`, `cmake`, `ninja`
-* **Visual Studio 2022+** with "Desktop development with C++" (CMake and Ninja are bundled)
+**Windows:** MSYS2 UCRT64 (`mingw-w64-ucrt-x86_64-gcc`, `cmake`, `ninja`) or Visual Studio 2022+ with "Desktop development with C++".
 
 ```bat
 build.bat
 ```
 
-The toolchain is auto-detected: MinGW first (`MINGW_BIN`, `PATH`, `C:\msys64\ucrt64\bin`), then Visual Studio (via `vswhere`).
-To set your own paths, copy `build.config.example.bat` to `build.config.bat` (git-ignored) and edit it.
+MinGW is picked if found, otherwise Visual Studio. Custom paths: copy `build.config.example.bat` to `build.config.bat`.
 
-Output: `build\<mingw|msvc>\reaper_drop_to_sampler-x64.dll` (same name as the ReaPack install) → copy it to `%APPDATA%\REAPER\UserPlugins\`.
-
-`build.bat deploy` builds, closes REAPER, copies the DLL and restarts REAPER. Paths come from `PLUGIN_DIR` / `REAPER_EXE` in `build.config.bat`.
-
-### macOS (experimental)
-
-Requires Xcode command line tools and CMake. SWELL comes from the [WDL](https://github.com/justinfrankel/WDL) submodule:
+**macOS / Linux:** CMake, Perl and a C++17 compiler (Xcode command line tools on macOS).
 
 ```sh
-git submodule update --init
 ./build.sh
 ```
 
-Output: `build/macos/reaper_drop_to_sampler.dylib` (universal arm64 + x86_64). `./build.sh deploy` also copies it to `~/Library/Application Support/REAPER/UserPlugins/`.
-
-### Linux (experimental)
-
-Requires CMake, Perl and GCC or Clang (GTK headers are not needed: SWELL comes from REAPER at runtime):
-
-```sh
-git submodule update --init
-./build.sh
-```
-
-Output: `build/linux/reaper_drop_to_sampler-<arch>.so` (e.g. `x86_64`). `./build.sh deploy` also copies it to `~/.config/REAPER/UserPlugins/`.
-
-The version comes from `-DDTS_VERSION=x.y.z` (local builds default to `0.0.0-dev`). Every push to `main` and every pull request is built for all platforms by the **Build** workflow.
+`build.bat deploy` / `./build.sh deploy` also copies the plugin to `UserPlugins` (and restarts REAPER on Windows).
 
 ## Release
 
-Releases are built by GitHub Actions; nothing is built or uploaded by hand.
-
-1. Make sure the commit you want to release is pushed to `main`, then tag it with `vX.Y.Z` and push the tag:
-
-   ```sh
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
-
-   The **Release** workflow (`.github/workflows/release.yml`) builds `reaper_drop_to_sampler-x64.dll` (Windows) and `reaper_drop_to_sampler.dylib` (macOS), `reaper_drop_to_sampler-x86_64.so` (Linux) with version `0.1.0` and creates a **draft** release with them. Only `vX.Y.Z` tags on commits in `main` are released.
-
-   To leave a platform out, delete its file from the draft: ReaPack lists only the platforms whose file is attached.
-2. On GitHub, open the draft (**Releases**), write the description and click **Publish release**. The description becomes the ReaPack changelog, e.g.:
-
-   ```
-   - Added chromatic mode for Cartridge
-   - Fixed drop on an empty FX slot
-   ```
-
-   The description must not be empty. Write it in English: every ReaPack user sees it.
-3. The **ReaPack** workflow (`.github/workflows/reapack.yml`) adds the version to `index.xml` and commits it to `main`. Run `git pull` afterwards to get that commit locally.
-
-To fix the changelog, edit the description of the published release: `index.xml` is updated automatically.
-
-To rebuild a draft (e.g. after a fix), move the tag and push it again; the draft's files are replaced:
-
 ```sh
-git tag -f v0.1.0
-git push -f origin v0.1.0
+git tag v0.1.0
+git push origin v0.1.0
 ```
+
+The tag must point to a commit in `main`. GitHub Actions builds all platforms and creates a **draft** release. Write the description (it becomes the ReaPack changelog; English, not empty) and publish. `index.xml` is updated automatically, so `git pull` afterwards.
+
+To drop a platform, delete its file from the draft. To rebuild the draft, move the tag: `git tag -f v0.1.0 && git push -f origin v0.1.0`. Changelog fixes: edit the release description.
 
 ## How it works
 
@@ -124,6 +79,6 @@ Code layout (`src/`):
 * `platform/platform.h` — interfaces for everything OS-specific: `DropTarget` (takes over drops on a window), `DragOverlay` (cursor icon), file paths.
 * `platform/win/` — OLE `IDropTarget`, GDI+ layered window.
 * `platform/mac/` — the SWELL view's `NSDraggingDestination` methods overridden in a runtime subclass, `NSPanel` overlay.
-* `platform/linux/` — the TCP/MCP window procedure subclassed to take `WM_DROPFILES` (SWELL turns XDND drops into it). Hover comes from SWELL's process-wide `SWELL_DDrop_*` hooks, chained in front of REAPER's own (found by diffing libSwell's data around `SWELL_ExtendedAPI`). Overlay: an ARGB GDK window drawn with cairo, both looked up at runtime from REAPER's process.
+* `platform/linux/` — the TCP/MCP window procedure subclassed to take `WM_DROPFILES` (SWELL turns XDND drops into it). Hover comes from SWELL's process-wide `SWELL_DDrop_*` hooks, chained in front of REAPER's own. Overlay: an ARGB GDK window drawn with cairo, both looked up at runtime from REAPER's process.
 * `platform/posix/` — file helpers shared by macOS and Linux.
-* The Preferences page is a dialog in `resource.rc`; on macOS and Linux it is converted with `swell_resgen.pl` at build time.
+* The Preferences page is a dialog in `resource.rc`; on macOS and Linux it is converted with `swell_resgen.pl` from the [WDL](https://github.com/justinfrankel/WDL) submodule at build time.
