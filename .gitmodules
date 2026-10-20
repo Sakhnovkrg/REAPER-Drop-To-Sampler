@@ -1,0 +1,4 @@
+[submodule "vendor/WDL"]
+	path = vendor/WDL
+	url = https://github.com/justinfrankel/WDL.git
+	shallow = true

@@ -22,9 +22,9 @@
 * Перетащите файлы из Media Explorer (или Проводника) на список треков или в микшер.
 * В строке статуса под TCP отображается текущий режим (New sampler / Replace…).
 * **Shift** — один трек / несколько треков
-* **Ctrl** — Layers / Chromatic
-* **Alt** — Add / Replace (кроме режима «on FX slot»)
-* Опционально: `sampler_insert.png` / `sampler_replace.png` рядом с DLL заменяют встроенные иконки.
+* **Ctrl** (**Cmd** на macOS) — Layers / Chromatic
+* **Alt** (**Option** на macOS) — Add / Replace (кроме режима «on FX slot»)
+* Опционально: `sampler_insert.png` / `sampler_replace.png` в `UserPlugins` заменяют встроенные иконки.
 
 **Настройки:** *Extensions → Drop To Sampler* или *Preferences → Plug-ins → Drop To Sampler*.
 
@@ -33,6 +33,8 @@
 Вопросы, баги и идеи: [ветка на форуме Cockos](https://forum.cockos.com/showthread.php?p=2968712).
 
 ## Сборка
+
+### Windows
 
 Подойдёт любой из тулчейнов:
 
@@ -50,7 +52,18 @@ build.bat
 
 `build.bat deploy` собирает, закрывает REAPER, копирует DLL и снова запускает REAPER. Пути берутся из `PLUGIN_DIR` / `REAPER_EXE` в `build.config.bat`.
 
-Версия задаётся через `-DDTS_VERSION=x.y.z` (у локальных сборок по умолчанию `0.0.0-dev`).
+### macOS (экспериментально)
+
+Нужны Xcode command line tools и CMake. SWELL берётся из сабмодуля [WDL](https://github.com/justinfrankel/WDL):
+
+```sh
+git submodule update --init
+./build.sh
+```
+
+Результат: `build/macos/reaper_drop_to_sampler.dylib` (universal arm64 + x86_64). `./build.sh deploy` дополнительно копирует его в `~/Library/Application Support/REAPER/UserPlugins/`.
+
+Версия задаётся через `-DDTS_VERSION=x.y.z` (у локальных сборок по умолчанию `0.0.0-dev`). Каждый пуш в `main` и каждый pull request собирается под обе платформы workflow **Build**.
 
 ## Релиз
 
@@ -63,7 +76,9 @@ build.bat
    git push origin v0.1.0
    ```
 
-   Workflow **Release** (`.github/workflows/release.yml`) соберёт `reaper_drop_to_sampler-x64.dll` с версией `0.1.0` и создаст **черновик** релиза. Релизятся только теги `vX.Y.Z` на коммитах из `main`.
+   Workflow **Release** (`.github/workflows/release.yml`) соберёт `reaper_drop_to_sampler-x64.dll` (Windows) и `reaper_drop_to_sampler.dylib` (macOS) с версией `0.1.0` и создаст с ними **черновик** релиза. Релизятся только теги `vX.Y.Z` на коммитах из `main`.
+
+   Чтобы выпустить только Windows-версию, удалите `.dylib` из черновика: в ReaPack попадают только платформы, чей файл приложен к релизу.
 2. На GitHub откройте черновик (**Releases**), напишите описание и нажмите **Publish release**. Описание станет changelog в ReaPack, например:
 
    ```
@@ -76,7 +91,7 @@ build.bat
 
 Чтобы исправить changelog, отредактируйте описание опубликованного релиза — `index.xml` обновится сам.
 
-Чтобы пересобрать черновик (например, после исправления), перенесите тег и запушьте его заново — DLL в черновике заменится:
+Чтобы пересобрать черновик (например, после исправления), перенесите тег и запушьте его заново — файлы в черновике заменятся:
 
 ```sh
 git tag -f v0.1.0
@@ -85,9 +100,16 @@ git push -f origin v0.1.0
 
 ## Как это работает
 
-* OLE `IDropTarget` на окнах TCP/MCP перехватывает дроп файлов.
-* Стандартная вставка айтема блокируется; FX добавляется через `TrackFX_AddByName`.
+* Дроп файлов на окна TCP/MCP перехватывается, поэтому стандартная вставка айтема не происходит; FX добавляется через `TrackFX_AddByName`.
 * RS5k: `FILE0` + `DONE`; Cartridge: `pending_load.txt` + параметр Load Trigger.
 * Цель дропа (трек / слот FX) определяется через `GetThingFromPoint`.
-* Индикация: `Help_Set` + PNG-оверлей (GDI+).
+* Индикация: `Help_Set` + PNG-иконка у курсора.
 * Настройки хранятся в ExtState REAPER.
+
+Структура кода (`src/`):
+
+* `drop`, `sampler`, `tracks`, `settings*`, `prompts` — логика плагина; использует только REAPER API и подмножество Win32, которое REAPER на macOS предоставляет через SWELL.
+* `platform/platform.h` — интерфейсы всего платформенного: `DropTarget` (перехват дропа на окне), `DragOverlay` (иконка у курсора), пути к файлам.
+* `platform/win/` — OLE `IDropTarget`, layered-окно на GDI+.
+* `platform/mac/` — методы `NSDraggingDestination` вида SWELL, переопределённые в подклассе, созданном в рантайме; оверлей на `NSPanel`.
+* Страница настроек — диалог в `resource.rc`; на macOS он конвертируется `swell_resgen.pl` при сборке.

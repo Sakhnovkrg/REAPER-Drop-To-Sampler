@@ -1,7 +1,7 @@
 name: Release
 
-# Builds the DLL and creates a draft release. Add the release description
-# (it becomes the ReaPack changelog) and publish the draft - see reapack.yml.
+# Builds Windows + macOS binaries and creates a draft release. Add the release
+# description (it becomes the ReaPack changelog) and publish the draft - see reapack.yml.
 
 on:
   push:
@@ -11,43 +11,52 @@ on:
 permissions:
   contents: write
 
-env:
-  DLL_ASSET: reaper_drop_to_sampler-x64.dll
-
 jobs:
-  release:
-    runs-on: windows-latest
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Check tag is on main
-        shell: bash
         run: |
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "::error::Tag $GITHUB_REF_NAME points to a commit that is not on main"
             exit 1
           fi
 
-      - name: Build
-        shell: cmd
-        run: |
-          > build.config.bat echo set "TOOLCHAIN=msvc"
-          >> build.config.bat echo set "CMAKE_ARGS=-DDTS_VERSION=%GITHUB_REF_NAME:~1%"
-          call .\build.bat
+      - id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.check.outputs.version }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create draft release
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          mkdir -p dist
-          cp build/msvc/reaper_drop_to_sampler.dll "dist/$DLL_ASSET"
+          mkdir dist
+          cp artifacts/windows-x64/reaper_drop_to_sampler.dll dist/reaper_drop_to_sampler-x64.dll
+          cp artifacts/macos-universal/reaper_drop_to_sampler.dylib dist/reaper_drop_to_sampler.dylib
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "dist/$DLL_ASSET" --clobber
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" "dist/$DLL_ASSET" \
+            gh release create "$GITHUB_REF_NAME" dist/* \
               --draft \
               --title "$GITHUB_REF_NAME" \
               --notes ""

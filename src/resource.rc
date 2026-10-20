@@ -1,4 +1,7 @@
 #include "resource.h"
+
+#ifdef _WIN32
+#include <windows.h>
 #include "version.h"
 
 IDR_PNG_INSERT  RCDATA "res/sampler_insert.png"
@@ -30,4 +33,26 @@ BEGIN
     BEGIN
         VALUE "Translation", 0x409, 1200
     END
+END
+#endif
+
+// Preferences page. On macOS this dialog is converted by swell_resgen.pl.
+IDD_PREFS DIALOGEX 0, 0, 262, 200
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Sampler:", IDC_LABEL_SAMPLER, 8, 6, 246, 8
+    COMBOBOX        IDC_SAMPLER_COMBO, 8, 17, 246, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Rec-arm for new tracks:", IDC_LABEL_RECARM, 8, 34, 246, 8
+    COMBOBOX        IDC_RECARM_COMBO, 8, 45, 246, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Show sampler:", IDC_LABEL_SHOW, 8, 62, 246, 8
+    COMBOBOX        IDC_SHOW_COMBO, 8, 73, 246, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "If sampler exists:", IDC_LABEL_EXISTING, 8, 90, 246, 8
+    COMBOBOX        IDC_EXISTING_COMBO, 8, 101, 246, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Multiple media:", IDC_LABEL_MULTI, 8, 118, 246, 8
+    COMBOBOX        IDC_MULTI_COMBO, 8, 129, 246, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Multiple samplers on one track:", IDC_LABEL_MULTISAMP, 8, 146, 246, 8
+    COMBOBOX        IDC_MULTISAMP_COMBO, 8, 157, 246, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Debug", IDC_DEBUG_CHECK, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 8, 179, 80, 10
+    RTEXT           "", IDC_VERSION_LABEL, 174, 180, 80, 8
 END
