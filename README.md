@@ -15,11 +15,11 @@ An extension for [REAPER](https://www.reaper.fm/): dropping media onto the **TCP
 
 3. **Extensions → ReaPack → Browse packages…**, find **Drop To Sampler**, install it, then restart REAPER.
 
-Windows x64 only. If you installed the plugin by hand before, delete the old `reaper_drop_to_sampler.dll` from `UserPlugins`, otherwise REAPER loads both copies.
+Windows (x64) and macOS (Apple Silicon and Intel). If you installed the plugin by hand before, delete the old `reaper_drop_to_sampler.dll` from `UserPlugins`, otherwise REAPER loads both copies.
 
 ## Usage
 
-* Drag files from the Media Explorer (or Windows Explorer) onto the track list or the mixer.
+* Drag files from the Media Explorer (or Explorer / Finder) onto the track list or the mixer.
 * The status line under the TCP shows the current mode (New sampler / Replace…).
 * **Shift** — one track / multiple tracks
 * **Ctrl** (**Cmd** on macOS) — Layers / Chromatic

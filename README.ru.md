@@ -15,11 +15,11 @@
 
 3. **Extensions → ReaPack → Browse packages…**, найдите **Drop To Sampler**, установите и перезапустите REAPER.
 
-Только Windows x64. Если раньше плагин ставили вручную, удалите старый `reaper_drop_to_sampler.dll` из `UserPlugins`, иначе REAPER загрузит обе копии.
+Windows (x64) и macOS (Apple Silicon и Intel). Если раньше плагин ставили вручную, удалите старый `reaper_drop_to_sampler.dll` из `UserPlugins`, иначе REAPER загрузит обе копии.
 
 ## Использование
 
-* Перетащите файлы из Media Explorer (или Проводника) на список треков или в микшер.
+* Перетащите файлы из Media Explorer (или Проводника / Finder) на список треков или в микшер.
 * В строке статуса под TCP отображается текущий режим (New sampler / Replace…).
 * **Shift** — один трек / несколько треков
 * **Ctrl** (**Cmd** на macOS) — Layers / Chromatic
